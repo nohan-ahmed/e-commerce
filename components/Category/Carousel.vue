@@ -137,21 +137,27 @@ const canScrollRight = computed(() => currentIndex.value < totalSlides.value - 1
 
 // Navigation
 const nextSlide = () => {
+  pauseAutoScroll()
   if (canScrollRight.value) {
     currentIndex.value++
   } else {
     currentIndex.value = 0
   }
+  resumeAutoScroll()
 }
 
 const previousSlide = () => {
+  pauseAutoScroll()
   if (canScrollLeft.value) {
     currentIndex.value--
   }
+  resumeAutoScroll()
 }
 
 const goToSlide = (index) => {
+  pauseAutoScroll()
   currentIndex.value = Math.max(0, Math.min(index, totalSlides.value - 1))
+  resumeAutoScroll()
 }
 
 const navigateToCategory = (category) => {
@@ -212,7 +218,14 @@ const handleMouseUp = () => {
 
 // Auto Scroll
 const startAutoScroll = () => {
-  autoScrollTimer.value = setInterval(nextSlide, 4000)
+  if (autoScrollTimer.value) return
+  autoScrollTimer.value = setInterval(() => {
+    if (canScrollRight.value) {
+      currentIndex.value++
+    } else {
+      currentIndex.value = 0
+    }
+  }, 4000)
 }
 
 const pauseAutoScroll = () => {
@@ -223,6 +236,7 @@ const pauseAutoScroll = () => {
 }
 
 const resumeAutoScroll = () => {
+  pauseAutoScroll()
   setTimeout(startAutoScroll, 1000)
 }
 
