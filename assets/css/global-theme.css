@@ -1,0 +1,69 @@
+/* Global theme variables */
+:root {
+  /* Primary color variables that will be updated by the theme plugin */
+  --primary: var(--color-primary-500);
+  --primary-foreground: white;
+  
+  /* Background colors */
+  --background: white;
+  --foreground: rgb(15 23 42);
+  
+  /* Muted colors */
+  --muted: rgb(248 250 252);
+  --muted-foreground: rgb(100 116 139);
+  
+  /* Border colors */
+  --border: rgb(226 232 240);
+  --input: rgb(226 232 240);
+  
+  /* Card colors */
+  --card: white;
+  --card-foreground: rgb(15 23 42);
+  
+  /* Accent colors */
+  --accent: rgb(248 250 252);
+  --accent-foreground: rgb(15 23 42);
+  
+  /* Secondary colors */
+  --secondary: rgb(241 245 249);
+  --secondary-foreground: rgb(15 23 42);
+}
+
+.dark {
+  /* Dark mode overrides */
+  --background: rgb(2 6 23);
+  --foreground: rgb(248 250 252);
+  
+  --muted: rgb(15 23 42);
+  --muted-foreground: rgb(148 163 184);
+  
+  --border: rgb(30 41 59);
+  --input: rgb(30 41 59);
+  
+  --card: rgb(2 6 23);
+  --card-foreground: rgb(248 250 252);
+  
+  --accent: rgb(15 23 42);
+  --accent-foreground: rgb(248 250 252);
+  
+  --secondary: rgb(30 41 59);
+  --secondary-foreground: rgb(248 250 252);
+}
+
+/* Apply theme colors to body */
+body {
+  background-color: var(--background);
+  color: var(--foreground);
+  transition: background-color 0.3s ease, color 0.3s ease;
+}
+
+/* Global theme classes */
+.bg-background { background-color: var(--background); }
+.text-foreground { color: var(--foreground); }
+.bg-primary { background-color: var(--primary); }
+.text-primary { color: var(--primary); }
+.bg-muted { background-color: var(--muted); }
+.text-muted-foreground { color: var(--muted-foreground); }
+.border-border { border-color: var(--border); }
+.bg-card { background-color: var(--card); }
+.text-card-foreground { color: var(--card-foreground); }

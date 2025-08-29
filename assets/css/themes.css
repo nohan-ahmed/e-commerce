@@ -1,0 +1,26 @@
+/* Custom theme variables */
+:root {
+  --gradient-primary: linear-gradient(135deg, #3b82f6, #2563eb);
+  --shadow-colored: 0 10px 25px -3px rgba(59, 130, 246, 0.1);
+}
+
+/* Theme-aware components */
+.theme-card {
+  @apply bg-white border border-gray-200 shadow-sm hover:shadow-md transition-all duration-300;
+}
+
+.dark .theme-card {
+  @apply bg-gray-900 border-gray-800;
+}
+
+.theme-button-primary {
+  @apply bg-blue-600 text-white hover:bg-blue-700 shadow-sm hover:shadow-md;
+}
+
+.theme-gradient-bg {
+  background: var(--gradient-primary);
+}
+
+.theme-shadow-colored {
+  box-shadow: var(--shadow-colored);
+}
