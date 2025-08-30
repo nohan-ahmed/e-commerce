@@ -9,7 +9,7 @@ export const useSupabaseProducts = () => {
         categories(name),
         brands(name),
         product_images(image_url, is_main),
-        product_variants(*),
+        product_variants(regular_price, discount_price, stock, is_active),
         reviews(rating)
       `)
 
@@ -34,24 +34,12 @@ export const useSupabaseProducts = () => {
         categories(name),
         brands(name),
         product_images(image_url, is_main),
-        product_variants(*),
+        product_variants(id, name, value, sku, regular_price, discount_price, stock, is_active, attributes),
         product_attributes(*),
         reviews(*, auth.users(email))
       `)
       .eq('id', id)
       .single()
-  }
-
-  const createProduct = async (product: any) => {
-    return await supabase.from('products').insert(product).select().single()
-  }
-
-  const updateProduct = async (id: string, updates: any) => {
-    return await supabase.from('products').update(updates).eq('id', id).select().single()
-  }
-
-  const deleteProduct = async (id: string) => {
-    return await supabase.from('products').delete().eq('id', id)
   }
 
   const getFeaturedProducts = async (limit = 8) => {
@@ -64,9 +52,21 @@ export const useSupabaseProducts = () => {
         categories(name),
         brands(name),
         product_images(image_url, is_main),
-        product_variants(price, stock)
+        product_variants(regular_price, discount_price, stock, is_active)
       `)
       .limit(limit)
+  }
+
+  const createProduct = async (product: any) => {
+    return await supabase.from('products').insert(product).select().single()
+  }
+
+  const updateProduct = async (id: string, updates: any) => {
+    return await supabase.from('products').update(updates).eq('id', id).select().single()
+  }
+
+  const deleteProduct = async (id: string) => {
+    return await supabase.from('products').delete().eq('id', id)
   }
 
   return {

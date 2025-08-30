@@ -55,9 +55,24 @@
             <div class="absolute inset-0 rounded-full bg-gradient-to-r from-primary-500/20 to-purple-500/20 opacity-0 hover:opacity-100 transition-opacity duration-300 -z-10 blur-md"></div>
           </div>
           
+          <!-- Wishlist Button -->
+          <NuxtLink to="/wishlist" class="relative group">
+            <UButton variant="ghost" size="sm" square class="relative">
+              <UIcon name="i-heroicons-heart" class="w-5 h-5 group-hover:scale-110 transition-transform duration-200 group-hover:text-pink-500" />
+              <UBadge 
+                v-if="$wishlist.count.value > 0" 
+                :label="$wishlist.count.value.toString()" 
+                color="pink" 
+                size="xs" 
+                class="absolute -top-1 -right-1 animate-pulse"
+              />
+            </UButton>
+            <div class="absolute inset-0 rounded-full bg-gradient-to-r from-pink-500/20 to-red-500/20 opacity-0 group-hover:opacity-100 transition-opacity duration-300 -z-10 blur-md"></div>
+          </NuxtLink>
+          
           <!-- Artistic Cart -->
-          <div class="relative">
-            <UButton variant="ghost" size="sm" square class="relative group">
+          <NuxtLink to="/cart" class="relative group">
+            <UButton variant="ghost" size="sm" square class="relative">
               <UIcon name="i-heroicons-shopping-bag" class="w-5 h-5 group-hover:scale-110 transition-transform duration-200" />
               <UBadge 
                 v-if="cartCount > 0" 
@@ -67,8 +82,8 @@
                 class="absolute -top-1 -right-1 animate-pulse"
               />
             </UButton>
-            <div class="absolute inset-0 rounded-full bg-gradient-to-r from-red-500/20 to-pink-500/20 opacity-0 hover:opacity-100 transition-opacity duration-300 -z-10 blur-md"></div>
-          </div>
+            <div class="absolute inset-0 rounded-full bg-gradient-to-r from-red-500/20 to-pink-500/20 opacity-0 group-hover:opacity-100 transition-opacity duration-300 -z-10 blur-md"></div>
+          </NuxtLink>
 
           <!-- User Menu -->
           <UDropdown v-if="user" :items="userItems" class="relative">
@@ -85,8 +100,8 @@
           
           <!-- Auth Buttons -->
           <div v-else class="hidden md:flex space-x-2">
-            <UButton variant="ghost" size="sm" class="rounded-full">Sign In</UButton>
-            <UButton size="sm" class="rounded-full bg-gradient-to-r from-primary-500 to-primary-600 hover:from-primary-600 hover:to-primary-700 shadow-lg shadow-primary-500/25 hover:shadow-primary-500/40 transition-all duration-200">
+            <UButton variant="ghost" size="sm" class="rounded-full" to="/auth/login">Sign In</UButton>
+            <UButton size="sm" class="rounded-full bg-gradient-to-r from-primary-500 to-primary-600 hover:from-primary-600 hover:to-primary-700 shadow-lg shadow-primary-500/25 hover:shadow-primary-500/40 transition-all duration-200" to="/auth/register">
               Sign Up
             </UButton>
           </div>
@@ -152,14 +167,27 @@
               <UIcon :name="item.icon" class="w-4 h-4 mr-3" />
               {{ item.label }}
             </UButton>
+            
+            <!-- Mobile Wishlist -->
+            <UButton
+              to="/wishlist"
+              variant="ghost"
+              block
+              class="justify-start rounded-xl hover:bg-pink-50 dark:hover:bg-pink-900/20"
+              @click="isOpen = false"
+            >
+              <UIcon name="i-heroicons-heart" class="w-4 h-4 mr-3" />
+              Wishlist
+              <UBadge v-if="$wishlist.count.value > 0" :label="$wishlist.count.value.toString()" color="pink" size="xs" class="ml-auto" />
+            </UButton>
           </div>
 
           <!-- Mobile Auth -->
           <div v-if="!user" class="pt-4 mt-4 border-t border-gray-200/20 dark:border-gray-800/20 space-y-2">
-            <UButton variant="outline" block class="rounded-xl" @click="isOpen = false">
+            <UButton variant="outline" block class="rounded-xl" to="/auth/login" @click="isOpen = false">
               Sign In
             </UButton>
-            <UButton block class="rounded-xl bg-gradient-to-r from-primary-500 to-primary-600" @click="isOpen = false">
+            <UButton block class="rounded-xl bg-gradient-to-r from-primary-500 to-primary-600" to="/auth/register" @click="isOpen = false">
               Sign Up
             </UButton>
           </div>
@@ -171,6 +199,8 @@
 
 <script setup>
 const { user, signOut } = useSupabaseAuth()
+const { getWishlist } = useSupabaseWishlist()
+const { $wishlist } = useNuxtApp()
 const searchQuery = ref('')
 const isOpen = ref(false)
 const cartCount = ref(3)
@@ -184,9 +214,19 @@ const navItems = [
 
 const userItems = [
   [{ label: 'Profile', icon: 'i-heroicons-user', to: '/profile' }],
+  [{ label: 'Wishlist', icon: 'i-heroicons-heart', to: '/wishlist' }],
   [{ label: 'Orders', icon: 'i-heroicons-shopping-bag', to: '/orders' }],
   [{ label: 'Sign Out', icon: 'i-heroicons-arrow-right-on-rectangle', click: signOut }]
 ]
+
+const loadWishlistCount = async () => {
+  if (user.value) {
+    const { data } = await getWishlist()
+    $wishlist.setCount(data?.length || 0)
+  } else {
+    $wishlist.setCount(0)
+  }
+}
 
 const handleSearch = () => {
   if (searchQuery.value.trim()) {
@@ -197,5 +237,13 @@ const handleSearch = () => {
 
 watch(() => useRoute().path, () => {
   isOpen.value = false
+})
+
+watch(user, () => {
+  loadWishlistCount()
+})
+
+onMounted(() => {
+  loadWishlistCount()
 })
 </script>

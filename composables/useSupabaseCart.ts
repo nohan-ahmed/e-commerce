@@ -2,74 +2,111 @@ export const useSupabaseCart = () => {
   const supabase = useSupabaseClient()
   const user = useSupabaseUser()
 
-  const getCartItems = async () => {
-    if (!user.value) return { data: [], error: null }
+  const getOrCreateCart = async () => {
+    if (!user.value) return null
     
-    return await supabase
-      .from('cart_items')
-      .select(`
-        *,
-        products(name, price, product_images(image_url, is_main)),
-        product_variants(name, value, price)
-      `)
-      .eq('user_id', user.value.id)
-  }
-
-  const addToCart = async (productId: string, variantId?: string, quantity = 1) => {
-    if (!user.value) throw new Error('User not authenticated')
-
-    const { data: existing } = await supabase
-      .from('cart_items')
+    let { data: cart } = await supabase
+      .from('carts')
       .select('*')
       .eq('user_id', user.value.id)
-      .eq('product_id', productId)
-      .eq('variant_id', variantId || null)
       .single()
-
-    if (existing) {
-      return await supabase
-        .from('cart_items')
-        .update({ quantity: existing.quantity + quantity })
-        .eq('id', existing.id)
+    
+    if (!cart) {
+      const { data: newCart } = await supabase
+        .from('carts')
+        .insert({ user_id: user.value.id })
         .select()
         .single()
+      cart = newCart
+    }
+    
+    return cart
+  }
+
+  const addToCart = async (productId: string, variantId: string, quantity = 1) => {
+    const cart = await getOrCreateCart()
+    if (!cart) return { error: 'Not authenticated' }
+
+    return await supabase
+      .from('cart_items')
+      .upsert({
+        cart_id: cart.id,
+        product_id: productId,
+        variant_id: variantId,
+        quantity
+      }, {
+        onConflict: 'cart_id,product_id,variant_id'
+      })
+  }
+
+  const updateCartItem = async (productId: string, variantId: string, quantity: number) => {
+    const cart = await getOrCreateCart()
+    if (!cart) return { error: 'Not authenticated' }
+
+    if (quantity <= 0) {
+      return await supabase
+        .from('cart_items')
+        .delete()
+        .eq('cart_id', cart.id)
+        .eq('product_id', productId)
+        .eq('variant_id', variantId)
     }
 
     return await supabase
       .from('cart_items')
-      .insert({
-        user_id: user.value.id,
-        product_id: productId,
-        variant_id: variantId,
-        quantity
-      })
-      .select()
-      .single()
+      .update({ quantity })
+      .eq('cart_id', cart.id)
+      .eq('product_id', productId)
+      .eq('variant_id', variantId)
   }
 
-  const updateCartItem = async (id: string, quantity: number) => {
+  const removeFromCart = async (productId: string, variantId: string) => {
+    const cart = await getOrCreateCart()
+    if (!cart) return { error: 'Not authenticated' }
+
     return await supabase
       .from('cart_items')
-      .update({ quantity })
-      .eq('id', id)
-      .select()
-      .single()
+      .delete()
+      .eq('cart_id', cart.id)
+      .eq('product_id', productId)
+      .eq('variant_id', variantId)
   }
 
-  const removeFromCart = async (id: string) => {
-    return await supabase.from('cart_items').delete().eq('id', id)
+  const getCartItems = async () => {
+    const cart = await getOrCreateCart()
+    if (!cart) return { data: [], error: null }
+
+    return await supabase
+      .from('cart_items')
+      .select(`
+        *,
+        products(
+          id,
+          name,
+          categories(name),
+          brands(name),
+          product_images(image_url, is_main)
+        ),
+        product_variants(regular_price, discount_price, stock, is_active)
+      `)
+      .eq('cart_id', cart.id)
   }
 
   const clearCart = async () => {
-    if (!user.value) return
-    return await supabase.from('cart_items').delete().eq('user_id', user.value.id)
+    const cart = await getOrCreateCart()
+    if (!cart) return { error: 'Not authenticated' }
+
+    return await supabase
+      .from('cart_items')
+      .delete()
+      .eq('cart_id', cart.id)
   }
 
   return {
-    getCartItems,
     addToCart,
     updateCartItem,
     removeFromCart,
+    getCartItems,
     clearCart
   }
 }
