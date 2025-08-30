@@ -74,26 +74,22 @@ const categoriesWithDetails = ref([
 
 const heroSlides = ref([])
 const featuredProducts = ref([])
+const { getFeaturedProducts } = useSupabaseProducts()
 
 onMounted(async () => {
-  // Sample data
-  heroSlides.value = [
-    {
-      id: 1,
-      title: 'Latest iPhone 15 Pro',
-      subtitle: 'Experience the power of A17 Pro chip',
-      cta_text: 'Shop Now',
-      cta_link: '/products',
-      image_url: 'https://images.unsplash.com/photo-1592750475338-74b7b21085ab?w=1200&h=600&fit=crop'
-    }
-  ]
+  // Fetch hero slides from database
+  const supabase = useSupabaseClient()
+  const { data: slides } = await supabase
+    .from('hero_slides')
+    .select('*')
+    .eq('is_active', true)
+    .order('order_index')
   
-  featuredProducts.value = [
-    { id: 1, name: 'iPhone 15 Pro', price: 999.99, stock: 15, categories: { name: 'Smartphones' } },
-    { id: 2, name: 'MacBook Pro M3', price: 1999.99, stock: 8, categories: { name: 'Laptops' } },
-    { id: 3, name: 'AirPods Pro', price: 249.99, stock: 25, categories: { name: 'Headphones' } },
-    { id: 4, name: 'iPad Air', price: 599.99, stock: 12, categories: { name: 'Tablets' } }
-  ]
+  heroSlides.value = slides || []
+  
+  // Fetch featured products from database
+  const { data: products } = await getFeaturedProducts(4)
+  featuredProducts.value = products || []
 })
 
 useHead({

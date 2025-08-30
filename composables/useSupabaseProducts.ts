@@ -54,9 +54,25 @@ export const useSupabaseProducts = () => {
     return await supabase.from('products').delete().eq('id', id)
   }
 
+  const getFeaturedProducts = async (limit = 8) => {
+    return await supabase
+      .from('products')
+      .select(`
+        id,
+        name,
+        description,
+        categories(name),
+        brands(name),
+        product_images(image_url, is_main),
+        product_variants(price, stock)
+      `)
+      .limit(limit)
+  }
+
   return {
     getProducts,
     getProduct,
+    getFeaturedProducts,
     createProduct,
     updateProduct,
     deleteProduct
