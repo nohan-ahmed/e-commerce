@@ -9,9 +9,10 @@ export const useSupabaseProducts = () => {
         categories(name),
         brands(name),
         product_images(image_url, is_main),
-        product_variants(regular_price, discount_price, stock, is_active),
+        product_variants!inner(regular_price, discount_price, stock, is_active),
         reviews(rating)
       `)
+      .eq('product_variants.is_active', true)
 
     if (filters?.category_id) {
       query = query.eq('category_id', filters.category_id)
@@ -49,11 +50,14 @@ export const useSupabaseProducts = () => {
         id,
         name,
         description,
+        is_featured,
         categories(name),
         brands(name),
         product_images(image_url, is_main),
-        product_variants(regular_price, discount_price, stock, is_active)
+        product_variants!inner(regular_price, discount_price, stock, is_active)
       `)
+      .eq('is_featured', true)
+      .eq('product_variants.is_active', true)
       .limit(limit)
   }
 
