@@ -39,37 +39,25 @@ export const useSupabaseCart = () => {
       })
   }
 
-  const updateCartItem = async (productId: string, variantId: string, quantity: number) => {
-    const cart = await getOrCreateCart()
-    if (!cart) return { error: 'Not authenticated' }
-
+  const updateCartItem = async (itemId: string, quantity: number) => {
     if (quantity <= 0) {
       return await supabase
         .from('cart_items')
         .delete()
-        .eq('cart_id', cart.id)
-        .eq('product_id', productId)
-        .eq('variant_id', variantId)
+        .eq('id', itemId)
     }
 
     return await supabase
       .from('cart_items')
       .update({ quantity })
-      .eq('cart_id', cart.id)
-      .eq('product_id', productId)
-      .eq('variant_id', variantId)
+      .eq('id', itemId)
   }
 
-  const removeFromCart = async (productId: string, variantId: string) => {
-    const cart = await getOrCreateCart()
-    if (!cart) return { error: 'Not authenticated' }
-
+  const removeFromCart = async (itemId: string) => {
     return await supabase
       .from('cart_items')
       .delete()
-      .eq('cart_id', cart.id)
-      .eq('product_id', productId)
-      .eq('variant_id', variantId)
+      .eq('id', itemId)
   }
 
   const getCartItems = async () => {
@@ -83,11 +71,13 @@ export const useSupabaseCart = () => {
         products(
           id,
           name,
+          shipping_fee,
+          tax,
           categories(name),
           brands(name),
           product_images(image_url, is_main)
         ),
-        product_variants(regular_price, discount_price, stock, is_active)
+        product_variants(name, value, regular_price, discount_price, stock, is_active)
       `)
       .eq('cart_id', cart.id)
   }

@@ -9,7 +9,7 @@ export const useSupabaseProducts = () => {
         categories(name),
         brands(name),
         product_images(image_url, is_main),
-        product_variants!inner(regular_price, discount_price, stock, is_active),
+        product_variants!inner(id, name, value, regular_price, discount_price, stock, is_active),
         reviews(rating)
       `)
       .eq('product_variants.is_active', true)
@@ -51,10 +51,12 @@ export const useSupabaseProducts = () => {
         name,
         description,
         is_featured,
+        shipping_fee,
+        tax,
         categories(name),
         brands(name),
         product_images(image_url, is_main),
-        product_variants!inner(regular_price, discount_price, stock, is_active)
+        product_variants!inner(id, name, value, regular_price, discount_price, stock, is_active)
       `)
       .eq('is_featured', true)
       .eq('product_variants.is_active', true)

@@ -54,25 +54,36 @@
         <div class="mb-6">
           <p class="text-gray-600">Brand: <span class="font-medium">{{ product.brands?.name }}</span></p>
           <p class="text-gray-600">Category: <span class="font-medium">{{ product.categories?.name }}</span></p>
-          <p class="text-gray-600">Stock: <span class="font-medium">{{ product.stock }} available</span></p>
+          <p class="text-gray-600">Stock: <span class="font-medium">{{ totalStock }} available</span></p>
+          <p class="text-gray-600">Shipping: <span class="font-medium">${{ parseFloat(product.shipping_fee || 0).toFixed(2) }}</span></p>
+          <p class="text-gray-600">Tax: <span class="font-medium">${{ parseFloat(product.tax || 0).toFixed(2) }}</span></p>
         </div>
         
         <!-- Variants -->
-        <div v-if="product.product_variants?.length" class="mb-6">
+        <div v-if="activeVariants.length" class="mb-6">
           <h3 class="text-lg font-medium mb-3">Options</h3>
           <div class="space-y-3">
-            <div v-for="variant in product.product_variants" :key="variant.id">
-              <label class="flex items-center">
-                <input 
-                  type="radio" 
-                  :value="variant.id" 
-                  v-model="selectedVariant"
-                  class="mr-2"
-                >
-                <span>{{ variant.name }}: {{ variant.value }}</span>
-                <span v-if="variant.price !== product.price" class="ml-2 text-primary-600">
-                  (+${{ (variant.price - product.price).toFixed(2) }})
-                </span>
+            <div v-for="variant in activeVariants" :key="variant.id">
+              <label class="flex items-center justify-between p-3 border rounded-lg cursor-pointer hover:bg-gray-50" :class="selectedVariant === variant.id ? 'border-primary-500 bg-primary-50' : 'border-gray-200'">
+                <div class="flex items-center">
+                  <input 
+                    type="radio" 
+                    :value="variant.id" 
+                    v-model="selectedVariant"
+                    class="mr-3"
+                  >
+                  <div>
+                    <span class="font-medium">{{ variant.name }}: {{ variant.value }}</span>
+                    <div class="text-sm text-gray-500">Stock: {{ variant.stock }}</div>
+                  </div>
+                </div>
+                <div class="text-right">
+                  <div v-if="variant.discount_price" class="space-y-1">
+                    <div class="text-lg font-bold text-primary-600">${{ parseFloat(variant.discount_price).toFixed(2) }}</div>
+                    <div class="text-sm text-gray-500 line-through">${{ parseFloat(variant.regular_price).toFixed(2) }}</div>
+                  </div>
+                  <div v-else class="text-lg font-bold">${{ parseFloat(variant.regular_price).toFixed(2) }}</div>
+                </div>
               </label>
             </div>
           </div>
@@ -92,11 +103,11 @@
               v-model="quantity" 
               type="number" 
               min="1" 
-              :max="product.stock"
+              :max="totalStock"
               class="w-20 px-3 py-1 border-t border-b border-gray-300 text-center focus:outline-none"
             >
             <button 
-              @click="quantity = Math.min(product.stock, quantity + 1)"
+              @click="quantity = Math.min(totalStock, quantity + 1)"
               class="px-3 py-1 border border-gray-300 rounded-r-lg hover:bg-gray-100"
             >
               +
@@ -108,10 +119,10 @@
         <div class="flex space-x-4 mb-8">
           <button 
             @click="addToCart"
-            :disabled="product.stock === 0"
+            :disabled="totalStock === 0"
             class="flex-1 btn-primary disabled:bg-gray-300 disabled:cursor-not-allowed"
           >
-            {{ product.stock === 0 ? 'Out of Stock' : 'Add to Cart' }}
+            {{ totalStock === 0 ? 'Out of Stock' : 'Add to Cart' }}
           </button>
           <button class="px-6 py-2 border border-gray-300 rounded-lg hover:bg-gray-50">
             <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -245,18 +256,48 @@ const reviewCount = computed(() => {
 
 const currentPrice = computed(() => {
   if (selectedVariant.value) {
-    const variant = product.value.product_variants.find(v => v.id === selectedVariant.value)
-    return variant?.price || product.value.price
+    const variant = product.value.product_variants?.find(v => v.id === selectedVariant.value)
+    return variant?.discount_price || variant?.regular_price || '0.00'
   }
-  return product.value.price
+  // Show lowest price from active variants
+  const activeVariants = product.value.product_variants?.filter(v => v.is_active) || []
+  if (activeVariants.length > 0) {
+    const prices = activeVariants.map(v => parseFloat(v.discount_price || v.regular_price))
+    return Math.min(...prices).toFixed(2)
+  }
+  return '0.00'
+})
+
+const activeVariants = computed(() => {
+  return product.value.product_variants?.filter(v => v.is_active) || []
+})
+
+const totalStock = computed(() => {
+  return activeVariants.value.reduce((sum, v) => sum + (v.stock || 0), 0)
 })
 
 const addToCart = async () => {
+  // If no variant selected, select the first available one
+  let variantId = selectedVariant.value
+  if (!variantId && product.value.product_variants?.length) {
+    variantId = product.value.product_variants.find(v => v.is_active)?.id
+  }
+  
+  if (!variantId) {
+    alert('Please select a variant')
+    return
+  }
+  
   try {
-    await addItemToCart(product.value.id, selectedVariant.value, quantity.value)
-    // Show success message
+    const { error } = await addItemToCart(product.value.id, variantId, quantity.value)
+    if (error) {
+      alert('Error: ' + error.message)
+    } else {
+      alert('Added to cart successfully!')
+    }
   } catch (error) {
     console.error('Error adding to cart:', error)
+    alert('Failed to add to cart')
   }
 }
 

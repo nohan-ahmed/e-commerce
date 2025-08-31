@@ -101,6 +101,9 @@
 
     <!-- Corner Accent -->
     <div class="absolute bottom-0 right-0 w-20 h-20 bg-gradient-to-tl from-cyan-500/20 to-transparent rounded-tl-full opacity-0 group-hover:opacity-100 transition-opacity duration-700"></div>
+    
+    <!-- Notification -->
+    <CartNotification :show="showNotification" :message="notificationMessage" />
   </div>
 </template>
 
@@ -154,7 +157,40 @@ const hasMultipleVariants = computed(() => {
   return activeVariants.value.length > 1
 })
 
-const addToCart = () => {
-  console.log('Added to cart:', props.product.name)
+const { addToCart: addItemToCart } = useSupabaseCart()
+const showNotification = ref(false)
+const notificationMessage = ref('')
+
+const addToCart = async () => {
+  console.log('Product data:', props.product)
+  console.log('Active variants:', activeVariants.value)
+  
+  if (totalStock.value === 0) return
+  
+  // Get the first available variant
+  const variant = activeVariants.value[0]
+  console.log('Selected variant:', variant)
+  console.log('Variant keys:', Object.keys(variant))
+  console.log('Variant.id specifically:', variant.id)
+  
+  if (!variant) {
+    alert('No variants available')
+    return
+  }
+  
+  try {
+    const { error } = await addItemToCart(props.product.id, variant.id, 1)
+    if (error) {
+      alert('Error: ' + error.message)
+    } else {
+      notificationMessage.value = 'Added to cart!'
+      showNotification.value = true
+      setTimeout(() => {
+        showNotification.value = false
+      }, 3000)
+    }
+  } catch (error) {
+    alert('Failed to add to cart')
+  }
 }
 </script>

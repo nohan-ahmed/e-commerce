@@ -1,123 +1,209 @@
 <template>
-  <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-    <h1 class="text-3xl font-bold mb-8">Shopping Cart</h1>
+  <div class="min-h-screen bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900">
+    <!-- Background Effects -->
+    <div class="fixed inset-0 bg-[radial-gradient(ellipse_at_top,_var(--tw-gradient-stops))] from-cyan-900/20 via-slate-900 to-slate-900"></div>
+    <div class="fixed inset-0 bg-grid-white/[0.02] bg-[size:60px_60px]"></div>
     
-    <div v-if="loading" class="text-center py-12">
-      <div class="animate-spin rounded-full h-12 w-12 border-b-2 border-primary-600 mx-auto"></div>
-    </div>
-    
-    <div v-else-if="cartItems.length === 0" class="text-center py-12">
-      <svg class="w-24 h-24 text-gray-300 mx-auto mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 3h2l.4 2M7 13h10l4-8H5.4m0 0L7 13m0 0l-1.5 6M7 13l-1.5 6m0 0h9m-9 0h9"></path>
-      </svg>
-      <h2 class="text-2xl font-semibold text-gray-600 mb-2">Your cart is empty</h2>
-      <p class="text-gray-500 mb-6">Add some products to get started</p>
-      <NuxtLink to="/products" class="btn-primary">Continue Shopping</NuxtLink>
-    </div>
-    
-    <div v-else class="grid grid-cols-1 lg:grid-cols-3 gap-8">
-      <!-- Cart Items -->
-      <div class="lg:col-span-2">
-        <div class="space-y-4">
-          <div v-for="item in cartItems" :key="item.id" class="card">
-            <div class="flex items-center space-x-4">
-              <img 
-                :src="getItemImage(item)" 
-                :alt="item.products.name"
-                class="w-20 h-20 object-cover rounded-lg"
-              >
-              
-              <div class="flex-1">
-                <h3 class="font-medium">{{ item.products.name }}</h3>
-                <p v-if="item.product_variants" class="text-sm text-gray-500">
-                  {{ item.product_variants.name }}: {{ item.product_variants.value }}
-                </p>
-                <p class="text-lg font-semibold text-primary-600">
-                  ${{ getItemPrice(item) }}
-                </p>
-              </div>
-              
-              <div class="flex items-center space-x-2">
-                <button 
-                  @click="updateQuantity(item.id, item.quantity - 1)"
-                  :disabled="item.quantity <= 1"
-                  class="px-2 py-1 border border-gray-300 rounded hover:bg-gray-100 disabled:opacity-50"
-                >
-                  -
-                </button>
-                <span class="px-3 py-1 border border-gray-300 rounded">{{ item.quantity }}</span>
-                <button 
-                  @click="updateQuantity(item.id, item.quantity + 1)"
-                  class="px-2 py-1 border border-gray-300 rounded hover:bg-gray-100"
-                >
-                  +
-                </button>
-              </div>
-              
-              <button 
-                @click="removeItem(item.id)"
-                class="text-red-600 hover:text-red-800"
-              >
-                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path>
-                </svg>
-              </button>
-            </div>
-          </div>
+    <div class="relative z-10 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
+      <!-- Header -->
+      <div class="text-center mb-12">
+        <h1 class="text-5xl font-black text-transparent bg-gradient-to-r from-cyan-400 via-purple-400 to-pink-400 bg-clip-text mb-4">
+          Shopping Cart
+        </h1>
+        <div class="w-24 h-1 bg-gradient-to-r from-cyan-500 to-purple-500 mx-auto rounded-full"></div>
+      </div>
+      
+      <!-- Loading State -->
+      <div v-if="loading" class="flex justify-center items-center py-20">
+        <div class="relative">
+          <div class="w-16 h-16 border-4 border-cyan-500/30 rounded-full animate-spin"></div>
+          <div class="absolute inset-0 w-16 h-16 border-4 border-transparent border-t-cyan-500 rounded-full animate-spin"></div>
         </div>
       </div>
       
-      <!-- Order Summary -->
-      <div class="lg:col-span-1">
-        <div class="card sticky top-4">
-          <h2 class="text-xl font-semibold mb-4">Order Summary</h2>
-          
-          <div class="space-y-2 mb-4">
-            <div class="flex justify-between">
-              <span>Subtotal ({{ totalItems }} items)</span>
-              <span>${{ subtotal.toFixed(2) }}</span>
+      <!-- Empty Cart -->
+      <div v-else-if="cartItems.length === 0" class="text-center py-20">
+        <div class="relative inline-block mb-8">
+          <div class="w-32 h-32 bg-gradient-to-br from-slate-800 to-slate-700 rounded-3xl flex items-center justify-center border border-slate-600">
+            <UIcon name="i-heroicons-shopping-bag" class="w-16 h-16 text-slate-400" />
+          </div>
+          <div class="absolute -top-2 -right-2 w-8 h-8 bg-gradient-to-r from-cyan-500 to-purple-500 rounded-full flex items-center justify-center">
+            <span class="text-white text-sm font-bold">0</span>
+          </div>
+        </div>
+        <h2 class="text-3xl font-bold text-white mb-4">Your cart is empty</h2>
+        <p class="text-slate-400 mb-8 text-lg">Discover amazing products and start shopping</p>
+        <UButton to="/products" size="xl" class="bg-gradient-to-r from-cyan-500 to-purple-500 hover:from-cyan-400 hover:to-purple-400">
+          <UIcon name="i-heroicons-sparkles" class="w-5 h-5 mr-2" />
+          Start Shopping
+        </UButton>
+      </div>
+      
+      <!-- Cart Content -->
+      <div v-else class="grid grid-cols-1 xl:grid-cols-3 gap-8">
+        <!-- Cart Items -->
+        <div class="xl:col-span-2 space-y-6">
+          <div class="bg-slate-800/50 backdrop-blur-xl rounded-3xl border border-slate-700/50 p-6">
+            <div class="flex items-center justify-between mb-6">
+              <h2 class="text-2xl font-bold text-white">Cart Items</h2>
+              <div class="px-4 py-2 bg-gradient-to-r from-cyan-500/20 to-purple-500/20 rounded-full border border-cyan-500/30">
+                <span class="text-cyan-300 font-semibold">{{ totalItems }} items</span>
+              </div>
             </div>
-            <div class="flex justify-between">
-              <span>Shipping</span>
-              <span>{{ shipping === 0 ? 'Free' : `$${shipping.toFixed(2)}` }}</span>
-            </div>
-            <div class="flex justify-between">
-              <span>Tax</span>
-              <span>${{ tax.toFixed(2) }}</span>
-            </div>
-            <hr class="my-2">
-            <div class="flex justify-between text-lg font-semibold">
-              <span>Total</span>
-              <span>${{ total.toFixed(2) }}</span>
+            
+            <div class="space-y-4">
+              <div v-for="item in cartItems" :key="item.id" 
+                   class="group bg-slate-900/50 rounded-2xl border border-slate-700/50 hover:border-cyan-500/50 transition-all duration-300 p-6">
+                <div class="flex items-center gap-6">
+                  <!-- Product Image -->
+                  <div class="relative flex-shrink-0">
+                    <div class="w-24 h-24 bg-gradient-to-br from-slate-800 to-slate-700 rounded-2xl overflow-hidden border border-slate-600">
+                      <img 
+                        :src="getItemImage(item)" 
+                        :alt="item.products?.name"
+                        class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
+                      >
+                    </div>
+                    <div class="absolute -top-2 -right-2 w-6 h-6 bg-gradient-to-r from-cyan-500 to-purple-500 rounded-full flex items-center justify-center">
+                      <span class="text-white text-xs font-bold">{{ item.quantity }}</span>
+                    </div>
+                  </div>
+                  
+                  <!-- Product Info -->
+                  <div class="flex-1 min-w-0">
+                    <h3 class="text-xl font-bold text-white mb-2 truncate">{{ item.products?.name }}</h3>
+                    <p v-if="item.product_variants" class="text-slate-400 mb-3">
+                      {{ item.product_variants.name }}: {{ item.product_variants.value }}
+                    </p>
+                    <div class="flex items-center gap-4">
+                      <div class="text-2xl font-black text-transparent bg-gradient-to-r from-cyan-400 to-purple-400 bg-clip-text">
+                        ${{ getItemPrice(item).toFixed(2) }}
+                      </div>
+                      <div class="text-sm text-slate-500">
+                        × {{ item.quantity }} = ${{ (getItemPrice(item) * item.quantity).toFixed(2) }}
+                      </div>
+                    </div>
+                  </div>
+                  
+                  <!-- Quantity Controls -->
+                  <div class="flex items-center gap-3">
+                    <div class="flex items-center bg-slate-800 rounded-xl border border-slate-600">
+                      <button 
+                        @click="updateQuantity(item.id, item.quantity - 1)"
+                        :disabled="item.quantity <= 1"
+                        class="p-2 text-slate-400 hover:text-cyan-400 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                      >
+                        <UIcon name="i-heroicons-minus" class="w-4 h-4" />
+                      </button>
+                      <div class="px-4 py-2 text-white font-semibold min-w-[3rem] text-center">
+                        {{ item.quantity }}
+                      </div>
+                      <button 
+                        @click="updateQuantity(item.id, item.quantity + 1)"
+                        class="p-2 text-slate-400 hover:text-cyan-400 transition-colors"
+                      >
+                        <UIcon name="i-heroicons-plus" class="w-4 h-4" />
+                      </button>
+                    </div>
+                    
+                    <!-- Remove Button -->
+                    <button 
+                      @click="removeItem(item.id)"
+                      class="p-2 text-slate-400 hover:text-red-400 transition-colors"
+                    >
+                      <UIcon name="i-heroicons-trash" class="w-5 h-5" />
+                    </button>
+                  </div>
+                </div>
+              </div>
             </div>
           </div>
-          
-          <!-- Coupon Code -->
-          <div class="mb-4">
-            <label class="block text-sm font-medium mb-2">Coupon Code</label>
-            <div class="flex">
-              <input 
-                v-model="couponCode"
-                type="text" 
-                placeholder="Enter code"
-                class="flex-1 px-3 py-2 border border-gray-300 rounded-l-lg focus:outline-none focus:ring-2 focus:ring-primary-500"
+        </div>
+        
+        <!-- Order Summary -->
+        <div class="xl:col-span-1">
+          <div class="sticky top-8 space-y-6">
+            <!-- Summary Card -->
+            <div class="bg-slate-800/50 backdrop-blur-xl rounded-3xl border border-slate-700/50 p-6">
+              <h2 class="text-2xl font-bold text-white mb-6">Order Summary</h2>
+              
+              <div class="space-y-4 mb-6">
+                <div class="flex justify-between text-slate-300">
+                  <span>Subtotal ({{ totalItems }} items)</span>
+                  <span class="font-semibold">${{ subtotal.toFixed(2) }}</span>
+                </div>
+                <div class="flex justify-between text-slate-300">
+                  <span>Shipping</span>
+                  <span class="font-semibold">{{ shipping === 0 ? 'Free' : `$${shipping.toFixed(2)}` }}</span>
+                </div>
+                <div class="flex justify-between text-slate-300">
+                  <span>Tax</span>
+                  <span class="font-semibold">${{ tax.toFixed(2) }}</span>
+                </div>
+                <div class="border-t border-slate-600 pt-4">
+                  <div class="flex justify-between text-xl font-bold text-white">
+                    <span>Total</span>
+                    <span class="text-transparent bg-gradient-to-r from-cyan-400 to-purple-400 bg-clip-text">
+                      ${{ total.toFixed(2) }}
+                    </span>
+                  </div>
+                </div>
+              </div>
+              
+              <!-- Promo Code -->
+              <div class="mb-6">
+                <label class="block text-sm font-medium text-slate-300 mb-3">Promo Code</label>
+                <div class="flex">
+                  <input 
+                    v-model="couponCode"
+                    type="text" 
+                    placeholder="Enter code"
+                    class="flex-1 px-4 py-3 bg-slate-900/50 border border-slate-600 rounded-l-xl text-white placeholder-slate-400 focus:outline-none focus:border-cyan-500 transition-colors"
+                  >
+                  <button 
+                    @click="applyCoupon"
+                    class="px-6 py-3 bg-gradient-to-r from-cyan-500 to-purple-500 hover:from-cyan-400 hover:to-purple-400 text-white font-semibold rounded-r-xl transition-all duration-300"
+                  >
+                    Apply
+                  </button>
+                </div>
+              </div>
+              
+              <!-- Checkout Button -->
+              <UButton 
+                to="/checkout" 
+                block 
+                size="xl"
+                class="bg-gradient-to-r from-cyan-500 to-purple-500 hover:from-cyan-400 hover:to-purple-400 text-white font-bold shadow-lg hover:shadow-cyan-500/25 transform hover:scale-105 transition-all duration-300 mb-4"
               >
-              <button 
-                @click="applyCoupon"
-                class="px-4 py-2 bg-gray-200 border border-l-0 border-gray-300 rounded-r-lg hover:bg-gray-300"
+                <UIcon name="i-heroicons-credit-card" class="w-5 h-5 mr-2" />
+                Proceed to Checkout
+              </UButton>
+              
+              <UButton 
+                to="/products" 
+                variant="outline" 
+                block 
+                class="border-slate-600 text-slate-300 hover:bg-slate-700 hover:border-slate-500"
               >
-                Apply
-              </button>
+                <UIcon name="i-heroicons-arrow-left" class="w-4 h-4 mr-2" />
+                Continue Shopping
+              </UButton>
+            </div>
+            
+            <!-- Security Badge -->
+            <div class="bg-slate-800/30 backdrop-blur-xl rounded-2xl border border-slate-700/50 p-4">
+              <div class="flex items-center gap-3">
+                <div class="w-10 h-10 bg-gradient-to-r from-green-500 to-emerald-500 rounded-full flex items-center justify-center">
+                  <UIcon name="i-heroicons-shield-check" class="w-5 h-5 text-white" />
+                </div>
+                <div>
+                  <div class="text-sm font-semibold text-white">Secure Checkout</div>
+                  <div class="text-xs text-slate-400">256-bit SSL encryption</div>
+                </div>
+              </div>
             </div>
           </div>
-          
-          <NuxtLink to="/checkout" class="w-full btn-primary block text-center">
-            Proceed to Checkout
-          </NuxtLink>
-          
-          <NuxtLink to="/products" class="block text-center text-primary-600 hover:text-primary-700 mt-4">
-            Continue Shopping
-          </NuxtLink>
         </div>
       </div>
     </div>
@@ -149,7 +235,12 @@ const getItemImage = (item) => {
 }
 
 const getItemPrice = (item) => {
-  return item.product_variants?.price || item.products.price
+  const variant = item.product_variants
+  if (variant) {
+    const price = parseFloat(variant.discount_price || variant.regular_price)
+    return isNaN(price) ? 0 : price
+  }
+  return 0
 }
 
 const updateQuantity = async (itemId, newQuantity) => {
@@ -189,11 +280,17 @@ const subtotal = computed(() => {
 })
 
 const shipping = computed(() => {
-  return subtotal.value > 100 ? 0 : 10 // Free shipping over $100
+  return cartItems.value.reduce((sum, item) => {
+    const productShipping = parseFloat(item.products?.shipping_fee || 0)
+    return sum + (productShipping * item.quantity)
+  }, 0)
 })
 
 const tax = computed(() => {
-  return subtotal.value * 0.08 // 8% tax
+  return cartItems.value.reduce((sum, item) => {
+    const productTax = parseFloat(item.products?.tax || 0)
+    return sum + (productTax * item.quantity)
+  }, 0)
 })
 
 const total = computed(() => {
