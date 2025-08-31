@@ -78,9 +78,9 @@
             Starting from
           </span>
         </div>
-        <div class="flex items-center space-x-1 bg-slate-800/50 px-2 py-1 rounded-lg flex-shrink-0">
+        <div v-if="averageRating > 0" class="flex items-center space-x-1 bg-slate-800/50 px-2 py-1 rounded-lg flex-shrink-0">
           <UIcon name="i-heroicons-star-solid" class="w-4 h-4 text-yellow-400" />
-          <span class="text-sm font-bold text-white">4.5</span>
+          <span class="text-sm font-bold text-white">{{ averageRating.toFixed(1) }}</span>
         </div>
       </div>
 
@@ -155,6 +155,13 @@ const totalStock = computed(() => {
 
 const hasMultipleVariants = computed(() => {
   return activeVariants.value.length > 1
+})
+
+const averageRating = computed(() => {
+  const reviews = props.product.reviews || []
+  if (reviews.length === 0) return 0
+  const sum = reviews.reduce((acc, review) => acc + review.rating, 0)
+  return sum / reviews.length
 })
 
 const { addToCart: addItemToCart } = useSupabaseCart()
