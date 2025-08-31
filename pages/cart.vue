@@ -216,6 +216,7 @@ definePageMeta({
 })
 
 const { getCartItems, updateCartItem, removeFromCart } = useSupabaseCart()
+const { updateCartCount, decrementCount } = useCartStore()
 
 const loading = ref(true)
 const cartItems = ref([])
@@ -249,14 +250,19 @@ const updateQuantity = async (itemId, newQuantity) => {
   try {
     await updateCartItem(itemId, newQuantity)
     await loadCartItems()
+    await updateCartCount()
   } catch (error) {
     console.error('Error updating quantity:', error)
   }
 }
 
 const removeItem = async (itemId) => {
+  const itemToRemove = cartItems.value.find(item => item.id === itemId)
+  const removedQuantity = itemToRemove?.quantity || 0
+  
   try {
     await removeFromCart(itemId)
+    decrementCount(removedQuantity)
     await loadCartItems()
   } catch (error) {
     console.error('Error removing item:', error)

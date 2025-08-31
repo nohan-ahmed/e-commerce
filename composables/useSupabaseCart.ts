@@ -27,16 +27,30 @@ export const useSupabaseCart = () => {
     const cart = await getOrCreateCart()
     if (!cart) return { error: 'Not authenticated' }
 
-    return await supabase
+    // Check if item already exists
+    const { data: existingItem } = await supabase
+      .from('cart_items')
+      .select('quantity')
+      .eq('cart_id', cart.id)
+      .eq('product_id', productId)
+      .eq('variant_id', variantId)
+      .single()
+
+    const newQuantity = existingItem ? existingItem.quantity + quantity : quantity
+    const isNewItem = !existingItem
+
+    const result = await supabase
       .from('cart_items')
       .upsert({
         cart_id: cart.id,
         product_id: productId,
         variant_id: variantId,
-        quantity
+        quantity: newQuantity
       }, {
         onConflict: 'cart_id,product_id,variant_id'
       })
+
+    return { ...result, isNewItem }
   }
 
   const updateCartItem = async (itemId: string, quantity: number) => {

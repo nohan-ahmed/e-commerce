@@ -180,12 +180,14 @@ const addToCart = async () => {
   }
   
   try {
-    const { error } = await addItemToCart(props.product.id, variant.id, 1)
+    const { error, isNewItem } = await addItemToCart(props.product.id, variant.id, 1)
     if (error) {
       alert('Error: ' + error.message)
     } else {
-      incrementCount(1)
-      notificationMessage.value = 'Added to cart!'
+      if (isNewItem) {
+        incrementCount(1)
+      }
+      notificationMessage.value = isNewItem ? 'Added to cart!' : 'Quantity updated!'
       showNotification.value = true
       setTimeout(() => {
         showNotification.value = false
