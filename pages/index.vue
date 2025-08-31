@@ -9,7 +9,7 @@
         <h2 class="text-3xl font-bold">Shop by Category</h2>
         <p class="text-gray-600 dark:text-gray-400 mt-4">Discover our wide range of product categories</p>
       </div>
-      <CategoryCarousel :categories="categoriesWithDetails" />
+      <CategoryCarousel :categories="categoriesWithIcons" />
     </UContainer>
 
     <!-- Featured Products -->
@@ -59,26 +59,37 @@
 </template>
 
 <script setup>
-const supabase = useSupabaseClient()
-
-const categoriesWithDetails = ref([
-  { id: 1, name: 'Smartphones', slug: 'smartphones', icon: 'i-heroicons-device-phone-mobile', productCount: 245 },
-  { id: 2, name: 'Laptops', slug: 'laptops', icon: 'i-heroicons-computer-desktop', productCount: 189 },
-  { id: 3, name: 'Headphones', slug: 'headphones', icon: 'i-heroicons-speaker-wave', productCount: 156 },
-  { id: 4, name: 'Cameras', slug: 'cameras', icon: 'i-heroicons-camera', productCount: 98 },
-  { id: 5, name: 'Gaming', slug: 'gaming', icon: 'i-heroicons-puzzle-piece', productCount: 167 },
-  { id: 6, name: 'Accessories', slug: 'accessories', icon: 'i-heroicons-cube', productCount: 234 },
-  { id: 7, name: 'Tablets', slug: 'tablets', icon: 'i-heroicons-device-tablet', productCount: 87 },
-  { id: 8, name: 'Watches', slug: 'watches', icon: 'i-heroicons-clock', productCount: 123 }
-])
+const { getFeaturedProducts } = useSupabaseProducts()
+const { getFeaturedCategories } = useSupabaseCategories()
 
 const heroSlides = ref([])
 const featuredProducts = ref([])
-const { getFeaturedProducts } = useSupabaseProducts()
+const categories = ref([])
+
+const iconMap = {
+  'smartphones': 'i-heroicons-device-phone-mobile',
+  'laptops': 'i-heroicons-computer-desktop',
+  'headphones': 'i-heroicons-speaker-wave',
+  'cameras': 'i-heroicons-camera',
+  'gaming': 'i-heroicons-puzzle-piece',
+  'accessories': 'i-heroicons-cube',
+  'tablets': 'i-heroicons-device-tablet',
+  'watches': 'i-heroicons-clock'
+}
+
+const categoriesWithIcons = computed(() => {
+  return categories.value.map(category => ({
+    ...category,
+    icon: iconMap[category.name.toLowerCase()] || 'i-heroicons-squares-2x2',
+    slug: category.name.toLowerCase().replace(/\s+/g, '-'),
+    productCount: 0
+  }))
+})
 
 onMounted(async () => {
-  // Fetch hero slides from database
   const supabase = useSupabaseClient()
+  
+  // Fetch hero slides from database
   const { data: slides } = await supabase
     .from('hero_slides')
     .select('*')
@@ -90,6 +101,10 @@ onMounted(async () => {
   // Fetch featured products from database
   const { data: products } = await getFeaturedProducts(4)
   featuredProducts.value = products || []
+  
+  // Fetch categories from database
+  const { data: categoriesData } = await getFeaturedCategories()
+  categories.value = categoriesData || []
 })
 
 useHead({
