@@ -200,10 +200,10 @@
 <script setup>
 const { user, signOut } = useSupabaseAuth()
 const { getWishlist } = useSupabaseWishlist()
+const { cartCount, updateCartCount } = useCartStore()
 const { $wishlist } = useNuxtApp()
 const searchQuery = ref('')
 const isOpen = ref(false)
-const cartCount = ref(3)
 
 const navItems = [
   { label: 'Home', to: '/', icon: 'i-heroicons-home' },
@@ -228,6 +228,8 @@ const loadWishlistCount = async () => {
   }
 }
 
+
+
 const handleSearch = () => {
   if (searchQuery.value.trim()) {
     navigateTo(`/search?q=${encodeURIComponent(searchQuery.value)}`)
@@ -241,9 +243,11 @@ watch(() => useRoute().path, () => {
 
 watch(user, () => {
   loadWishlistCount()
+  updateCartCount()
 })
 
 onMounted(() => {
   loadWishlistCount()
+  updateCartCount()
 })
 </script>

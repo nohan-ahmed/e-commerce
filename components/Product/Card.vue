@@ -158,6 +158,7 @@ const hasMultipleVariants = computed(() => {
 })
 
 const { addToCart: addItemToCart } = useSupabaseCart()
+const { incrementCount } = useCartStore()
 const showNotification = ref(false)
 const notificationMessage = ref('')
 
@@ -183,6 +184,7 @@ const addToCart = async () => {
     if (error) {
       alert('Error: ' + error.message)
     } else {
+      incrementCount(1)
       notificationMessage.value = 'Added to cart!'
       showNotification.value = true
       setTimeout(() => {
