@@ -29,7 +29,7 @@
 <script setup>
 const props = defineProps({
   productId: {
-    type: String,
+    type: [String, Number],
     required: true
   }
 })
