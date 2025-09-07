@@ -102,8 +102,7 @@
     <!-- Corner Accent -->
     <div class="absolute bottom-0 right-0 w-20 h-20 bg-gradient-to-tl from-cyan-500/20 to-transparent rounded-tl-full opacity-0 group-hover:opacity-100 transition-opacity duration-700"></div>
     
-    <!-- Notification -->
-    <CartNotification :show="showNotification" :message="notificationMessage" />
+
   </div>
 </template>
 
@@ -166,8 +165,7 @@ const averageRating = computed(() => {
 
 const { addToCart: addItemToCart } = useSupabaseCart()
 const { incrementCount } = useCartStore()
-const showNotification = ref(false)
-const notificationMessage = ref('')
+const toast = useToast()
 
 const addToCart = async () => {
   console.log('Product data:', props.product)
@@ -182,26 +180,37 @@ const addToCart = async () => {
   console.log('Variant.id specifically:', variant.id)
   
   if (!variant) {
-    alert('No variants available')
+    toast.add({
+      title: 'No variants available',
+      color: 'orange'
+    })
     return
   }
   
   try {
     const { error, isNewItem } = await addItemToCart(props.product.id, variant.id, 1)
     if (error) {
-      alert('Error: ' + error.message)
+      toast.add({
+        title: 'Error adding to cart',
+        description: error.message,
+        color: 'red'
+      })
     } else {
       if (isNewItem) {
         incrementCount(1)
       }
-      notificationMessage.value = isNewItem ? 'Added to cart!' : 'Quantity updated!'
-      showNotification.value = true
-      setTimeout(() => {
-        showNotification.value = false
-      }, 3000)
+      toast.add({
+        title: isNewItem ? 'Added to cart!' : 'Quantity updated!',
+        description: `${props.product.name} ${isNewItem ? 'added to' : 'updated in'} your cart`,
+        color: 'green'
+      })
     }
   } catch (error) {
-    alert('Failed to add to cart')
+    toast.add({
+      title: 'Failed to add to cart',
+      description: 'Please try again',
+      color: 'red'
+    })
   }
 }
 </script>

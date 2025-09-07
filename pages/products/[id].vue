@@ -311,6 +311,8 @@
 const route = useRoute()
 const { getProduct } = useSupabaseProducts()
 const { addToCart: addItemToCart } = useSupabaseCart()
+const { incrementCount } = useCartStore()
+const toast = useToast()
 const { user } = useSupabaseAuth()
 const supabase = useSupabaseClient()
 
@@ -411,20 +413,39 @@ const addToCart = async () => {
   }
   
   if (!variantId) {
-    alert('Please select a variant')
+    toast.add({
+      title: 'Please select a variant',
+      color: 'orange'
+    })
     return
   }
   
   try {
-    const { error } = await addItemToCart(product.value.id, variantId, quantity.value)
+    const { error, isNewItem } = await addItemToCart(product.value.id, variantId, quantity.value)
+    
     if (error) {
-      alert('Error: ' + error.message)
+      toast.add({
+        title: 'Error adding to cart',
+        description: error.message,
+        color: 'red'
+      })
     } else {
-      alert('Added to cart successfully!')
+      if (isNewItem) {
+        incrementCount(quantity.value)
+      }
+      toast.add({
+        title: 'Added to cart!',
+        description: `${product.value.name} has been added to your cart`,
+        color: 'green'
+      })
     }
   } catch (error) {
     console.error('Error adding to cart:', error)
-    alert('Failed to add to cart')
+    toast.add({
+      title: 'Failed to add to cart',
+      description: 'Please try again',
+      color: 'red'
+    })
   }
 }
 
