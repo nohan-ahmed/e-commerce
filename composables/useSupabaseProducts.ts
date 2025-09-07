@@ -36,8 +36,8 @@ export const useSupabaseProducts = () => {
         brands(name),
         product_images(image_url, is_main),
         product_variants(id, name, value, sku, regular_price, discount_price, stock, is_active, attributes),
-        product_attributes(*),
-        reviews(*, auth.users(email))
+        product_attributes(key, value),
+        reviews(rating, comment, created_at)
       `)
       .eq('id', id)
       .single()

@@ -4,7 +4,15 @@
     <div class="fixed inset-0 bg-[radial-gradient(ellipse_at_top,_var(--tw-gradient-stops))] from-cyan-900/20 via-slate-900 to-slate-900"></div>
     <div class="fixed inset-0 bg-grid-white/[0.02] bg-[size:60px_60px]"></div>
     
-    <div v-if="product" class="relative z-10 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
+    <!-- Loading State -->
+    <div v-if="loading" class="relative z-10 flex justify-center items-center min-h-screen">
+      <div class="relative">
+        <div class="w-16 h-16 border-4 border-cyan-500/30 rounded-full animate-spin"></div>
+        <div class="absolute inset-0 w-16 h-16 border-4 border-transparent border-t-cyan-500 rounded-full animate-spin"></div>
+      </div>
+    </div>
+    
+    <div v-else-if="product" class="relative z-10 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
       <!-- Breadcrumb -->
       <nav class="flex mb-8" aria-label="Breadcrumb">
         <ol class="flex items-center space-x-2 text-sm">
@@ -307,6 +315,7 @@ const { user } = useSupabaseAuth()
 const supabase = useSupabaseClient()
 
 const product = ref(null)
+const loading = ref(true)
 const selectedImage = ref('')
 const selectedVariant = ref('')
 const quantity = ref(1)
@@ -323,29 +332,55 @@ const tabs = [
 ]
 
 // Load product data
-const { data } = await getProduct(route.params.id)
-product.value = data
-
-if (!product.value) {
-  throw createError({ statusCode: 404, statusMessage: 'Product not found' })
+const loadProduct = async () => {
+  try {
+    loading.value = true
+    console.log('Loading product with ID:', route.params.id)
+    const { data, error } = await getProduct(route.params.id)
+    console.log('Product data:', data, 'Error:', error)
+    
+    if (error || !data) {
+      console.error('Product not found or error occurred')
+      throw createError({ statusCode: 404, statusMessage: 'Product not found' })
+    }
+    product.value = data
+    
+    // Set default selected variant
+    if (product.value.product_variants?.length) {
+      selectedVariant.value = product.value.product_variants.find(v => v.is_active)?.id || ''
+    }
+    console.log('Product loaded successfully:', product.value.name)
+  } catch (error) {
+    console.error('Error loading product:', error)
+    throw createError({ statusCode: 404, statusMessage: 'Product not found' })
+  } finally {
+    loading.value = false
+  }
 }
 
+// Load product on mount
+onMounted(() => {
+  loadProduct()
+})
+
 const mainImage = computed(() => {
+  if (!product.value) return ''
   return product.value.product_images?.find(img => img.is_main)?.image_url || 
          product.value.product_images?.[0]?.image_url
 })
 
 const averageRating = computed(() => {
-  if (!product.value.reviews?.length) return 0
+  if (!product.value?.reviews?.length) return 0
   const sum = product.value.reviews.reduce((acc, review) => acc + review.rating, 0)
   return Math.round(sum / product.value.reviews.length)
 })
 
 const reviewCount = computed(() => {
-  return product.value.reviews?.length || 0
+  return product.value?.reviews?.length || 0
 })
 
 const currentPrice = computed(() => {
+  if (!product.value) return '0.00'
   if (selectedVariant.value) {
     const variant = product.value.product_variants?.find(v => v.id === selectedVariant.value)
     return variant?.discount_price || variant?.regular_price || '0.00'
@@ -360,6 +395,7 @@ const currentPrice = computed(() => {
 })
 
 const activeVariants = computed(() => {
+  if (!product.value) return []
   return product.value.product_variants?.filter(v => v.is_active) || []
 })
 
@@ -419,10 +455,15 @@ const formatDate = (date) => {
   return new Date(date).toLocaleDateString()
 }
 
-useHead({
-  title: `${product.value.name} - ECommerce Store`,
-  meta: [
-    { name: 'description', content: product.value.description }
-  ]
+// Dynamic head based on product data
+watchEffect(() => {
+  if (product.value) {
+    useHead({
+      title: `${product.value.name} - ECommerce Store`,
+      meta: [
+        { name: 'description', content: product.value.description || 'Product details' }
+      ]
+    })
+  }
 })
 </script>

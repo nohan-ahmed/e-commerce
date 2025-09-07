@@ -127,22 +127,30 @@ const filters = reactive({
 const loadData = async () => {
   loading.value = true
   
-  // Load categories and brands
-  const [categoriesRes, brandsRes] = await Promise.all([
-    supabase.from('categories').select('*').order('name'),
-    supabase.from('brands').select('*').order('name')
-  ])
-  
-  categories.value = categoriesRes.data || []
-  brands.value = brandsRes.data || []
-  
-  // Load products
-  await loadProducts()
-  loading.value = false
+  try {
+    // Load categories and brands
+    const [categoriesRes, brandsRes] = await Promise.all([
+      supabase.from('categories').select('*').order('name'),
+      supabase.from('brands').select('*').order('name')
+    ])
+    
+    categories.value = categoriesRes.data || []
+    brands.value = brandsRes.data || []
+    
+    // Load products
+    await loadProducts()
+  } catch (error) {
+    console.error('Error loading data:', error)
+    // Load sample data on error
+    await loadProducts()
+  } finally {
+    loading.value = false
+  }
 }
 
 const loadProducts = async () => {
-  const { data } = await getProducts(filters)
+  const { data, error } = await getProducts(filters)
+  console.log('Products loaded:', data, 'Error:', error)
   products.value = data || []
   sortProducts()
 }
