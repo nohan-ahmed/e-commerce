@@ -169,6 +169,23 @@
                 PayPal
               </label>
             </div>
+            
+            <div class="flex items-center">
+              <input 
+                id="cod" 
+                type="radio" 
+                value="cod"
+                v-model="paymentMethod"
+                class="mr-3"
+              >
+              <label for="cod" class="flex items-center">
+                <UIcon name="i-heroicons-banknotes" class="w-8 h-8 mr-2 text-green-600" />
+                <div>
+                  <div class="font-medium">Cash on Delivery</div>
+                  <div class="text-sm text-gray-500">Pay with cash upon delivery</div>
+                </div>
+              </label>
+            </div>
           </div>
         </div>
       </div>
@@ -224,6 +241,16 @@
             {{ loading ? 'Processing...' : 'Place Order' }}
           </button>
           
+          <div v-if="paymentMethod === 'cod'" class="mt-4 p-3 bg-green-50 border border-green-200 rounded-lg">
+            <div class="flex items-center">
+              <UIcon name="i-heroicons-information-circle" class="w-5 h-5 text-green-600 mr-2" />
+              <span class="text-sm text-green-800 font-medium">Cash on Delivery Selected</span>
+            </div>
+            <p class="text-xs text-green-700 mt-1 ml-7">
+              You'll pay ${{ total.toFixed(2) }} in cash when your order is delivered.
+            </p>
+          </div>
+          
           <p class="text-xs text-gray-500 mt-4 text-center">
             By placing your order, you agree to our Terms of Service and Privacy Policy.
           </p>
@@ -245,7 +272,7 @@ const supabase = useSupabaseClient()
 
 const loading = ref(false)
 const cartItems = ref([])
-const paymentMethod = ref('credit_card')
+const paymentMethod = ref('cod')
 
 const shippingAddress = reactive({
   firstName: '',
@@ -301,24 +328,29 @@ const total = computed(() => {
 })
 
 const isFormValid = computed(() => {
-  return shippingAddress.firstName && 
+  const addressValid = shippingAddress.firstName && 
          shippingAddress.lastName && 
          shippingAddress.line1 && 
          shippingAddress.city && 
          shippingAddress.state && 
          shippingAddress.zipCode && 
-         shippingAddress.phone &&
-         paymentMethod.value
+         shippingAddress.phone
+  
+  const paymentValid = paymentMethod.value === 'cod' || 
+                      (paymentMethod.value === 'credit_card' && cardDetails.number && cardDetails.expiry && cardDetails.cvv)
+  
+  return addressValid && paymentValid
 })
 
 const placeOrder = async () => {
   if (!isFormValid.value) return
   
   loading.value = true
+  const toast = useToast()
   
   try {
     // Create address
-    const { data: address } = await supabase
+    const { data: address, error: addressError } = await supabase
       .from('addresses')
       .insert({
         user_id: user.value.id,
@@ -334,34 +366,117 @@ const placeOrder = async () => {
       .select()
       .single()
     
-    // Create order
-    const { data: order } = await createOrder({
-      user_id: user.value.id,
-      status: 'pending',
-      total_amount: total.value,
-      shipping_address_id: address.id,
-      billing_address_id: address.id
-    })
-    
-    // Create order items
-    const orderItems = cartItems.value.map(item => ({
-      order_id: order.id,
-      product_id: item.product_id,
+    if (addressError || !address?.id) {
+      throw new Error('Failed to create address')
+    }
+
+    // Prepare cart items for Edge Function
+    const cartItemsData = cartItems.value.map(item => ({
       variant_id: item.variant_id,
-      quantity: item.quantity,
-      price: getItemPrice(item)
+      quantity: item.quantity
     }))
+
+    // Call Edge Function
+    const { data: session } = await supabase.auth.getSession()
     
-    await supabase.from('order_items').insert(orderItems)
+    const response = await fetch('https://hxzpksniexqgkqdcdwer.supabase.co/functions/v1/dynamic-function', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${session.session?.access_token}`
+      },
+      body: JSON.stringify({
+        user_id: user.value.id,
+        cart_items: cartItemsData,
+        shipping_address_id: address.id,
+        billing_address_id: address.id,
+        payment_method: 'cod'
+      })
+    })
+
+    if (!response.ok) {
+      const errorText = await response.text()
+      console.error('Edge Function response:', response.status, errorText)
+      throw new Error(`Edge Function failed: ${response.status} ${errorText}`)
+    }
+
+    const functionResult = await response.json()
+
+    if (!functionResult?.order) {
+      console.error('No order returned from function:', functionResult)
+      throw new Error('Order creation failed - no order returned')
+    }
+
+    const { order } = functionResult
     
     // Clear cart
     await clearCart()
     
-    // Redirect to success page
+    // Show success message
+    toast.add({
+      title: 'Order Placed Successfully!',
+      description: 'Your COD order has been confirmed.',
+      color: 'green'
+    })
+    
+    // Redirect to order confirmation
     await navigateTo(`/orders/${order.id}`)
     
   } catch (error) {
     console.error('Error placing order:', error)
+    
+    // Fallback to direct database insertion if Edge Function fails
+    if (error.message?.includes('Failed to fetch') || error.message?.includes('Edge Function')) {
+      try {
+        console.log('Falling back to direct database insertion...')
+        
+        const { data: order, error: orderError } = await supabase
+          .from('orders')
+          .insert({
+            user_id: user.value.id,
+            status: 'pending',
+            total_amount: total.value,
+            shipping_address_id: address.id,
+            billing_address_id: address.id,
+            payment_method: 'cod',
+            payment_status: 'pending'
+          })
+          .select()
+          .single()
+        
+        if (orderError || !order?.id) {
+          throw new Error('Fallback order creation failed')
+        }
+        
+        const orderItems = cartItems.value.map(item => ({
+          order_id: order.id,
+          product_id: item.product_id,
+          variant_id: item.variant_id,
+          quantity: item.quantity
+        }))
+        
+        await supabase.from('order_items').insert(orderItems)
+        await clearCart()
+        
+        toast.add({
+          title: 'Order Placed Successfully!',
+          description: 'Your COD order has been confirmed.',
+          color: 'green'
+        })
+        
+        await navigateTo(`/orders/${order.id}`)
+        return
+        
+      } catch (fallbackError) {
+        console.error('Fallback also failed:', fallbackError)
+      }
+    }
+    
+    toast.add({
+      title: 'Order Failed',
+      description: error.message || 'There was an error placing your order. Please try again.',
+      color: 'red'
+    })
   } finally {
     loading.value = false
   }
