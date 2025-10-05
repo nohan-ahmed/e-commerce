@@ -87,19 +87,67 @@
             <!-- Price Range -->
             <div class="mb-6 lg:mb-8">
               <label class="block text-sm font-medium text-slate-300 mb-2 lg:mb-3">Price Range</label>
+              
+              <!-- Price Range Slider -->
+              <div class="mb-4">
+                <div class="relative">
+                  <input 
+                    v-model.number="priceRange.min"
+                    type="range"
+                    :min="0"
+                    :max="10000"
+                    :step="50"
+                    class="absolute w-full h-2 bg-slate-700 rounded-lg appearance-none cursor-pointer slider-thumb"
+                    @input="updateMinPrice"
+                  >
+                  <input 
+                    v-model.number="priceRange.max"
+                    type="range"
+                    :min="0"
+                    :max="10000"
+                    :step="50"
+                    class="absolute w-full h-2 bg-slate-700 rounded-lg appearance-none cursor-pointer slider-thumb"
+                    @input="updateMaxPrice"
+                  >
+                  <div class="relative h-2 bg-slate-700 rounded-lg">
+                    <div 
+                      class="absolute h-2 bg-gradient-to-r from-cyan-500 to-purple-500 rounded-lg"
+                      :style="{
+                        left: `${Math.min(priceRange.min, priceRange.max) / 10000 * 100}%`,
+                        width: `${Math.abs(priceRange.max - priceRange.min) / 10000 * 100}%`
+                      }"
+                    ></div>
+                  </div>
+                </div>
+                <div class="flex justify-between text-xs text-slate-400 mt-2">
+                  <span>${{ Math.min(priceRange.min, priceRange.max).toLocaleString() }}</span>
+                  <span>${{ Math.max(priceRange.min, priceRange.max).toLocaleString() }}</span>
+                </div>
+              </div>
+              
+              <!-- Price Input Fields -->
               <div class="grid grid-cols-2 gap-2 lg:gap-3">
-                <input 
-                  v-model="filters.minPrice" 
-                  type="number" 
-                  placeholder="Min"
-                  class="px-3 lg:px-4 py-2.5 lg:py-3 bg-slate-900/50 border border-slate-600 rounded-xl text-white placeholder-slate-400 focus:outline-none focus:border-cyan-500 transition-colors text-sm lg:text-base"
-                >
-                <input 
-                  v-model="filters.maxPrice" 
-                  type="number" 
-                  placeholder="Max"
-                  class="px-3 lg:px-4 py-2.5 lg:py-3 bg-slate-900/50 border border-slate-600 rounded-xl text-white placeholder-slate-400 focus:outline-none focus:border-cyan-500 transition-colors text-sm lg:text-base"
-                >
+                <div>
+                  <label class="block text-xs text-slate-400 mb-1">Min Price</label>
+                  <input 
+                    v-model.number="filters.minPrice" 
+                    type="number" 
+                    placeholder="0"
+                    min="0"
+                    class="w-full px-3 lg:px-4 py-2.5 lg:py-3 bg-slate-900/50 border border-slate-600 rounded-xl text-white placeholder-slate-400 focus:outline-none focus:border-cyan-500 transition-colors text-sm lg:text-base"
+                  >
+                </div>
+                <div>
+                  <label class="block text-xs text-slate-400 mb-1">Max Price</label>
+                  <input 
+                    v-model.number="filters.maxPrice" 
+                    type="number" 
+                    placeholder="10000"
+                    min="0"
+                    max="10000"
+                    class="w-full px-3 lg:px-4 py-2.5 lg:py-3 bg-slate-900/50 border border-slate-600 rounded-xl text-white placeholder-slate-400 focus:outline-none focus:border-cyan-500 transition-colors text-sm lg:text-base"
+                  >
+                </div>
               </div>
             </div>
             
@@ -210,6 +258,11 @@ const filters = reactive({
   maxPrice: ''
 })
 
+const priceRange = reactive({
+  min: 0,
+  max: 10000
+})
+
 // Load initial data
 const loadData = async () => {
   loading.value = true
@@ -246,6 +299,22 @@ const applyFilters = () => {
   loadProducts()
 }
 
+const updateMinPrice = () => {
+  if (priceRange.min > priceRange.max) {
+    priceRange.min = priceRange.max
+  }
+  filters.minPrice = Math.min(priceRange.min, priceRange.max)
+  filters.maxPrice = Math.max(priceRange.min, priceRange.max)
+}
+
+const updateMaxPrice = () => {
+  if (priceRange.max < priceRange.min) {
+    priceRange.max = priceRange.min
+  }
+  filters.minPrice = Math.min(priceRange.min, priceRange.max)
+  filters.maxPrice = Math.max(priceRange.min, priceRange.max)
+}
+
 const clearFilters = () => {
   Object.assign(filters, {
     search: '',
@@ -254,16 +323,24 @@ const clearFilters = () => {
     minPrice: '',
     maxPrice: ''
   })
+  priceRange.min = 0
+  priceRange.max = 10000
   loadProducts()
+}
+
+const getMinPrice = (product) => {
+  const variants = product.product_variants || []
+  const prices = variants.map(v => parseFloat(v.discount_price || v.regular_price))
+  return Math.min(...prices)
 }
 
 const sortProducts = () => {
   switch (sortBy.value) {
     case 'price_asc':
-      products.value.sort((a, b) => a.price - b.price)
+      products.value.sort((a, b) => getMinPrice(a) - getMinPrice(b))
       break
     case 'price_desc':
-      products.value.sort((a, b) => b.price - a.price)
+      products.value.sort((a, b) => getMinPrice(b) - getMinPrice(a))
       break
     case 'newest':
       products.value.sort((a, b) => new Date(b.created_at) - new Date(a.created_at))
@@ -273,10 +350,29 @@ const sortProducts = () => {
   }
 }
 
-// Watch for filter changes
+// Watch for filter changes with debounce for price inputs
+let filterTimeout
 watch(filters, () => {
-  loadProducts()
+  clearTimeout(filterTimeout)
+  filterTimeout = setTimeout(() => {
+    loadProducts()
+  }, 300)
 }, { deep: true })
+
+// Sync price inputs with slider
+watch(() => filters.minPrice, (newVal) => {
+  if (newVal !== '' && newVal !== null) {
+    const val = Math.max(0, Math.min(10000, Number(newVal)))
+    priceRange.min = val
+  }
+})
+
+watch(() => filters.maxPrice, (newVal) => {
+  if (newVal !== '' && newVal !== null) {
+    const val = Math.max(0, Math.min(10000, Number(newVal)))
+    priceRange.max = val
+  }
+})
 
 onMounted(() => {
   loadData()
@@ -300,3 +396,61 @@ useHead({
   ]
 })
 </script>
+
+<style scoped>
+.slider-thumb {
+  -webkit-appearance: none;
+  appearance: none;
+  height: 8px;
+  background: transparent;
+  outline: none;
+  pointer-events: none;
+}
+
+.slider-thumb::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, #06b6d4, #8b5cf6);
+  cursor: pointer;
+  pointer-events: auto;
+  box-shadow: 0 4px 12px rgba(6, 182, 212, 0.3);
+  transition: all 0.2s ease;
+}
+
+.slider-thumb::-webkit-slider-thumb:hover {
+  transform: scale(1.1);
+  box-shadow: 0 6px 16px rgba(6, 182, 212, 0.4);
+}
+
+.slider-thumb::-moz-range-thumb {
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, #06b6d4, #8b5cf6);
+  cursor: pointer;
+  pointer-events: auto;
+  border: none;
+  box-shadow: 0 4px 12px rgba(6, 182, 212, 0.3);
+  transition: all 0.2s ease;
+}
+
+.slider-thumb::-moz-range-thumb:hover {
+  transform: scale(1.1);
+  box-shadow: 0 6px 16px rgba(6, 182, 212, 0.4);
+}
+
+@media (max-width: 768px) {
+  .slider-thumb::-webkit-slider-thumb {
+    width: 18px;
+    height: 18px;
+  }
+  
+  .slider-thumb::-moz-range-thumb {
+    width: 18px;
+    height: 18px;
+  }
+}
+</style>

@@ -23,6 +23,12 @@ export const useSupabaseProducts = () => {
     if (filters?.search) {
       query = query.ilike('name', `%${filters.search}%`)
     }
+    if (filters?.minPrice) {
+      query = query.gte('product_variants.regular_price', filters.minPrice)
+    }
+    if (filters?.maxPrice) {
+      query = query.lte('product_variants.regular_price', filters.maxPrice)
+    }
 
     return await query
   }
